@@ -14,11 +14,11 @@ def timelist():
     reslist = []
     newid = 0
     fcin = open('job_list.dat','r')
-    fcout = open('newjob_list2.txt','wb')
+    fcout = open('newjob_list3.txt','wb')
     
     for line in fcin:
         id,cpu,mem,disk,starttime,scheduletime,finishtime = line.split()
-        if float(cpu) <= 0.1 and float(mem) <= 0.1 and float(cpu) > 0 and int(starttime)>0:
+        if float(cpu) <= 0.1 and float(mem) <= 0.1 and float(cpu) > 0 and int(starttime)>0 and int(finishtime)-int(scheduletime)>60000000:
             newid += 1
             cpu = int(float(cpu)*1000)
             mem = int(float(mem)*1000)
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     print len(result)
     cpu = 0
     mem = 0
-    fout = open("cpumem_filter2.dat","wb")
+    fout = open("cpumem_filter3.dat","wb")
     for line in result:
         cpu += float(line[1]) * line[3]
         mem += float(line[2]) * line[3]
