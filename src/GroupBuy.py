@@ -58,7 +58,8 @@ class HybridFrame(object):
         deal_id = self.online_approach(job)
         if deal_id != 0:
             jobleavetime = self.currenttime + job[4]
-            jobleaverecord = [job[0],deal_id,job[1], job[2], self.currenttime,jobleavetime]
+            deal_type = self.deallist[self.mp[deal_id]][0]
+            jobleaverecord = [job[0],deal_id,job[1], job[2], self.currenttime,jobleavetime,job[3],deal_type]
             self.preleave(jobleaverecord) # entering the leaving list
         else:
             self.queuelist.append(job)  #otherwise goes into the waiting queue, latest job append to the last           
@@ -78,7 +79,11 @@ class HybridFrame(object):
         deal_id = self.mp[leaverecord[1]]  #leaverecord[1] numbered from 1
         self.deallist[deal_id][2] -= leaverecord[2]
         self.deallist[deal_id][3] -= leaverecord[3]
-        self.fjob.writelines(str(leaverecord)+'\n')
+        
+        result = str(leaverecord[0])
+        for i in range(1,8):
+            result += ','+str(leaverecord[i])
+        self.fjob.writelines(result+'\n')
 
         if self.deallist[deal_id][2] <= 0 and self.deallist[deal_id][3] <= 0:
             self.deallist.__delitem__(deal_id)
@@ -92,8 +97,10 @@ class HybridFrame(object):
             deal_key = self.online_approach(job)
             if deal_key != 0:
                 leavetime = self.currenttime + job[4]
-                leave_record = [job[0],deal_key,job[1],job[2],self.currenttime,leavetime]
+                deal_type = self.deallist[self.mp[deal_key]][0]
+                leave_record = [job[0],deal_key,job[1],job[2],self.currenttime,leavetime,job[3],deal_type]
                 self.preleave(leave_record) # entering the leaving list
+                self.queuelist.remove(job)
 
         
     def operate(self):
@@ -137,7 +144,12 @@ class HybridFrame(object):
             cpumemdict[d[0]][0] += 1
             cpumemdict[d[0]][1] += d[2]
             cpumemdict[d[0]][2] += d[3]
-        self.fdeal.writelines(str(start)+' '+str(end)+' '+str(cpumemdict)+'\n')
+        
+        result = ""
+        for k in range(1,6):
+            result+=','+str(k)+','+str(cpumemdict[k][0])+','+str(cpumemdict[k][1])+','+str(cpumemdict[k][2])
+            
+        self.fdeal.writelines(str(start)+','+str(end)+result+'\n')
 
         
 class FirstFit(HybridFrame):
@@ -156,7 +168,7 @@ class FirstFit(HybridFrame):
     def offline_approach(self):
         tempdeallist = []
         tempdealcount = self.dealcount
-        while len(self.queuelist) !=0:
+        while(len(self.queuelist) != 0):
             job = self.queuelist.pop()
             tag = False
             num = 0
@@ -165,9 +177,13 @@ class FirstFit(HybridFrame):
                 if d[2]+job[1] <= self.deal[d[0]][0] and d[3] + job[2] <= self.deal[d[0]][1]: 
                     d[2] += job[1]  #cpu
                     d[3] += job[2]  #mem
-                    map_key = tempdealcount + num
+                    deal_key = tempdealcount + num
                     jobleavetime = self.currenttime+job[4]
-                    leave_record = [job[0],map_key,job[1],job[2],self.currenttime,jobleavetime]
+                    #print deal_key
+                    #print self.mp
+                    deal_type = tempdeallist[self.mp[deal_key]-len(self.deallist)][0]
+
+                    leave_record = [job[0],deal_key,job[1],job[2],self.currenttime,jobleavetime,job[3],deal_type]
                     self.preleave(leave_record) # entering the leaving list
                     tag = True
                     break
@@ -175,9 +191,12 @@ class FirstFit(HybridFrame):
             if tag == False:
                 self.queuelist.append(job)
                 __type = random.randint(1,5)
+                while(self.deal[__type]<job[1] or self.deal[__type]<job[2]):
+                    __type = random.randint(1,5)
                 self.dealcount += 1
                 tempdeallist.append([__type,self.currenttime, 0, 0, self.dealcount]) #initialized to be 0 used
                 self.mp[self.dealcount] = len(self.deallist) + len(tempdeallist) -1
+                #print self.mp
         
         for temp in tempdeallist:
             self.deallist.append(temp)
