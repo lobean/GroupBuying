@@ -141,6 +141,7 @@ class HybridFrame(object):
         """count the deal resource usage per time"""
         cpumemdict = {1:[0,0,0],2:[0,0,0],3:[0,0,0],4:[0,0,0],5:[0,0,0]} #sum,used_cpu,used_mem 
         for d in self.deallist:
+            #print d
             cpumemdict[d[0]][0] += 1
             cpumemdict[d[0]][1] += d[2]
             cpumemdict[d[0]][2] += d[3]
@@ -157,32 +158,35 @@ class FirstFit(HybridFrame):
         HybridFrame.__init__(self,filename)
         self.maxqueue = 1
    
-    def online_approach(self,job):      
+    def online_approach(self,job):
+        i = 0      
         for d in self.deallist:
             if d[2] + job[1] <= self.deal[d[0]][0] and d[3] + job[2] <= self.deal[d[0]][1]:
-                d[2] += job[1]
-                d[3] += job[2]
+                self.deallist[i][2] += job[1]
+                self.deallist[i][3] += job[2]
                 return d[4]
+            i += 1
         return 0   #deal id distributed from number 1,2,3....
     
     def offline_approach(self):
         tempdeallist = []
         tempdealcount = self.dealcount
+        #print self.queuelist
         while(len(self.queuelist) != 0):
             job = self.queuelist.pop()
+            #print job
             tag = False
             num = 0
             for d in tempdeallist:
                 num += 1
                 if d[2]+job[1] <= self.deal[d[0]][0] and d[3] + job[2] <= self.deal[d[0]][1]: 
-                    d[2] += job[1]  #cpu
-                    d[3] += job[2]  #mem
+                    tempdeallist[num-1][2] += job[1]  #cpu
+                    tempdeallist[num-1][3] += job[2]  #mem
                     deal_key = tempdealcount + num
                     jobleavetime = self.currenttime+job[4]
                     #print deal_key
                     #print self.mp
                     deal_type = tempdeallist[self.mp[deal_key]-len(self.deallist)][0]
-
                     leave_record = [job[0],deal_key,job[1],job[2],self.currenttime,jobleavetime,job[3],deal_type]
                     self.preleave(leave_record) # entering the leaving list
                     tag = True
@@ -191,12 +195,13 @@ class FirstFit(HybridFrame):
             if tag == False:
                 self.queuelist.append(job)
                 __type = random.randint(1,5)
-                while(self.deal[__type]<job[1] or self.deal[__type]<job[2]):
+                while(self.deal[__type][0] <job[1] or self.deal[__type][1] < job[2]):
                     __type = random.randint(1,5)
+                
                 self.dealcount += 1
                 tempdeallist.append([__type,self.currenttime, 0, 0, self.dealcount]) #initialized to be 0 used
                 self.mp[self.dealcount] = len(self.deallist) + len(tempdeallist) -1
-                #print self.mp
+                
         
         for temp in tempdeallist:
             self.deallist.append(temp)
@@ -223,7 +228,7 @@ class Factory(object):
         
 
 if __name__=="__main__":
-    filename = "/home/luobin/python/GroupBuying/src/newjob_list4.txt"
+    filename = "newjob_list4.txt"
     
     factory = Factory()
     test = factory.craeteApproach("firstfit",filename)
